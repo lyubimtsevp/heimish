@@ -242,7 +242,7 @@ export async function fetchProductReviews(productId: string): Promise<{
 }[]> {
   try {
     const response = await fetch(
-      `${API_URL}/reviews?filter[product_id][_eq]=${productId}&sort=-date_created`
+      `${API_URL}/reviews?filter[product_id][_eq]=${productId}&filter[is_approved][_eq]=true&sort=-date_created`
     );
 
     if (!response.ok) {

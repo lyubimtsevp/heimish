@@ -96,7 +96,7 @@ function ReviewCard({ review }: { review: Review }) {
                 </div>
                 <span className="text-sm text-gray-400">{formatDate(review.createdAt)}</span>
             </div>
-            <p className="text-gray-600 leading-relaxed">{review.text}</p>
+            <p className="text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: review.text }} />
         </div>
     );
 }
