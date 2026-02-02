@@ -3,6 +3,7 @@ import Footer from "@/components/Footer";
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
+import { fetchFAQItems } from "@/lib/api";
 
 interface FAQItem {
   id: number;
@@ -26,15 +27,10 @@ export default function FAQ() {
   const [openItems, setOpenItems] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    fetch("https://heimish.ru/api/faqs?sort=order:asc")
-      .then(res => res.json())
-      .then(data => {
-        if (data.data?.length > 0) {
-          setFaqItems(data.data.map((item: { id: number; question: string; answer: string }) => ({
-            id: item.id,
-            question: item.question,
-            answer: item.answer
-          })));
+    fetchFAQItems()
+      .then(items => {
+        if (items.length > 0) {
+          setFaqItems(items);
         }
       })
       .catch(err => console.error("FAQ error:", err))
@@ -84,7 +80,7 @@ export default function FAQ() {
                   {openItems.has(item.id) ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
                 </button>
                 {openItems.has(item.id) && (
-                  <div className="px-5 pb-5 pt-0"><div className="text-gray-600 leading-relaxed border-t border-gray-100 pt-4">{item.answer}</div></div>
+                  <div className="px-5 pb-5 pt-0"><div className="text-gray-600 leading-relaxed border-t border-gray-100 pt-4" dangerouslySetInnerHTML={{ __html: item.answer }} /></div>
                 )}
               </div>
             ))}
