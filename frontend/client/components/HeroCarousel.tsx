@@ -50,25 +50,25 @@ export default function HeroCarousel() {
   }, [emblaApi, onSelect]);
 
   return (
-    <div className="relative w-full overflow-hidden">
-      <div className="overflow-hidden" ref={emblaRef}>
-        <div className="flex">
+    <div className="relative w-full h-full overflow-hidden">
+      <div className="overflow-hidden h-full" ref={emblaRef}>
+        <div className="flex h-full">
           {slides.map((slide) => (
-            <div key={slide.id} className="flex-[0_0_100%] min-w-0">
+            <div key={slide.id} className="flex-[0_0_100%] min-w-0 h-full">
               {slide.link ? (
-                <Link to={slide.link} className="relative w-full block">
+                <Link to={slide.link} className="block w-full h-full">
                   <img
                     src={slide.imageUrl}
                     alt={slide.title}
-                    className="w-full h-auto object-cover"
+                    className="w-full h-full object-cover"
                   />
                 </Link>
               ) : (
-                <div className="relative w-full">
+                <div className="w-full h-full">
                   <img
                     src={slide.imageUrl}
                     alt={slide.title}
-                    className="w-full h-auto object-cover"
+                    className="w-full h-full object-cover"
                   />
                 </div>
               )}
