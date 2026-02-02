@@ -27,6 +27,7 @@ interface DirectusProduct {
   ingredients: string | null;
   usage_instructions: string | null;
   delivery_info: string | null;
+  is_best: number | boolean;
   reviews?: DirectusReview[];
   videos?: DirectusVideo[];
 }
@@ -102,6 +103,7 @@ function transformProduct(dp: DirectusProduct): Product {
     ingredients: dp.ingredients || undefined,
     usageInstructions: dp.usage_instructions || undefined,
     deliveryInfo: dp.delivery_info || undefined,
+    isBest: dp.is_best === 1 || dp.is_best === true,
     videos: dp.videos?.filter(v => v.is_active).map((video) => ({
       id: String(video.id),
       title: video.title,

@@ -138,9 +138,14 @@ export default function All() {
 
         // Filter by category
         if (selectedCategory === "best") {
-            // Best = top 20 by reviews
-            result.sort((a, b) => b.reviews - a.reviews);
-            result = result.slice(0, 20);
+            const top20 = [...result].sort((a, b) => b.reviews - a.reviews).slice(0, 20);
+            const ids = new Set(top20.map(p => p.id));
+            const extra = result.filter(p => p.isBest && !ids.has(p.id));
+            result = [...extra, ...top20].sort((a, b) => {
+                if (a.isBest && !b.isBest) return -1;
+                if (!a.isBest && b.isBest) return 1;
+                return b.reviews - a.reviews;
+            });
         } else if (selectedCategory !== "all") {
             result = result.filter(p => p.category === selectedCategory);
         }

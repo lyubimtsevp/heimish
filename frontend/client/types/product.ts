@@ -24,6 +24,7 @@ export interface Product {
     ingredients?: string;
     usageInstructions?: string;
     deliveryInfo?: string;
+    isBest?: boolean;
     videos?: ProductVideo[];
 }
 
