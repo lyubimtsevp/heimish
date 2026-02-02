@@ -589,9 +589,17 @@ export default function ProductDetail() {
                                     isOpen={openAccordion === "usage"}
                                     onToggle={() => toggleAccordion("usage")}
                                 >
-                                    <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                                        {product.usageInstructions || <span className="text-gray-500 italic">Способ применения будет добавлен позже.</span>}
-                                    </div>
+                                    {product.usageInstructions ? (
+                                        <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                                            {product.usageInstructions}
+                                        </div>
+                                    ) : (
+                                        <ul className="text-sm text-gray-600 space-y-2">
+                                            <li>1. Нанесите необходимое количество на кожу</li>
+                                            <li>2. Мягко помассируйте до полного впитывания</li>
+                                            <li>3. Используйте утром и/или вечером</li>
+                                        </ul>
+                                    )}
                                 </AccordionItem>
 
                                 <AccordionItem
@@ -599,9 +607,16 @@ export default function ProductDetail() {
                                     isOpen={openAccordion === "delivery"}
                                     onToggle={() => toggleAccordion("delivery")}
                                 >
-                                    <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
-                                        {product.deliveryInfo || "Доставка: 1-3 рабочих дня по России\nБесплатная доставка: от 3 000 ₽ в ПВЗ"}
-                                    </div>
+                                    {product.deliveryInfo ? (
+                                        <div className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">
+                                            {product.deliveryInfo}
+                                        </div>
+                                    ) : (
+                                        <div className="text-sm text-gray-600 space-y-2">
+                                            <p><strong>Доставка:</strong> 1-3 рабочих дня по России</p>
+                                            <p><strong>Бесплатная доставка:</strong> от 3 000 ₽ в ПВЗ</p>
+                                        </div>
+                                    )}
                                 </AccordionItem>
 
                                 <AccordionItem
