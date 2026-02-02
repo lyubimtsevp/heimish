@@ -286,7 +286,7 @@ export async function fetchProductReviews(productId: string): Promise<{
   }
 }
 
-// Fetch questions for a product (not implemented in Directus yet - return empty)
+// Fetch questions for a product
 export async function fetchProductQuestions(productId: string): Promise<{
   id: string;
   author: string;
@@ -294,7 +294,28 @@ export async function fetchProductQuestions(productId: string): Promise<{
   answer: string | null;
   createdAt: string;
 }[]> {
-  return [];
+  try {
+    const response = await fetch(
+      `${API_URL}/questions?filter[product_id][_eq]=${productId}&filter[is_approved][_eq]=true&sort=-date_created`
+    );
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data: DirectusResponse<{ id: number; author: string; question: string; answer: string | null; date_created?: string }[]> = await response.json();
+
+    return data.data.map((q) => ({
+      id: String(q.id),
+      author: q.author,
+      question: q.question,
+      answer: q.answer || null,
+      createdAt: q.date_created || new Date().toISOString(),
+    }));
+  } catch (error) {
+    console.error("Error fetching questions:", error);
+    return [];
+  }
 }
 
 // Create order in Directus
@@ -390,14 +411,28 @@ export async function createReview(data: {
   }
 }
 
-// Create question (not implemented in Directus yet)
+// Create question
 export async function createQuestion(data: {
   productId: string;
   author: string;
   question: string;
 }): Promise<boolean> {
-  console.warn("Questions not yet implemented in Directus");
-  return false;
+  try {
+    const response = await fetch(`${API_URL}/questions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: parseInt(data.productId) || null,
+        author: data.author,
+        question: data.question,
+        is_approved: false,
+      }),
+    });
+    return response.ok;
+  } catch (error) {
+    console.error("Error creating question:", error);
+    return false;
+  }
 }
 
 // Fetch FAQ items from Directus
