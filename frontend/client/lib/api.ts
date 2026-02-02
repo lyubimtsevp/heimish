@@ -1,136 +1,107 @@
 import { Product, ProductVideo } from "@/types/product";
 import localProductsData from "@/data/products.json";
 
-// Strapi API Configuration
-const STRAPI_URL = import.meta.env.VITE_STRAPI_URL || "https://heimish.ru/strapi-api";
-const API_URL = `${STRAPI_URL}/api`;
+// Directus API Configuration
+const DIRECTUS_URL = import.meta.env.VITE_DIRECTUS_URL || "https://heimish.ru/directus";
+const API_URL = `${DIRECTUS_URL}/items`;
 
 // Local products for image fallback
 const localProducts = localProductsData as Product[];
 
-// Strapi response types
-interface StrapiMedia {
+// Directus response types
+interface DirectusProduct {
   id: number;
-  url: string;
-  formats?: {
-    thumbnail?: { url: string };
-    small?: { url: string };
-    medium?: { url: string };
-    large?: { url: string };
-  };
-}
-
-interface StrapiVideo {
-  id: number;
-  title?: string;
-  type: "local" | "rutube" | "youtube";
-  file?: StrapiMedia;
-  externalUrl?: string;
-  thumbnail?: StrapiMedia;
-}
-
-interface StrapiProduct {
-  id: number;
-  documentId: string;
   title: string;
-  price: number;
-  oldPrice?: number | null;
-  isOnSale?: boolean;
-  description?: string;
-  category?: string;
-  line?: string;
-  rating?: number;
-  reviews?: number;
-  reviewsCount?: number;
-  inStock?: boolean;
-  images?: StrapiMedia[];
-  imageUrl?: string;
-  videos?: StrapiVideo[];
-  createdAt: string;
-  updatedAt: string;
-  publishedAt?: string;
+  slug: string | null;
+  price: string;
+  old_price: string | null;
+  is_on_sale: number | boolean;
+  description: string | null;
+  category: string | null;
+  line: string | null;
+  rating: string | null;
+  reviews_count: number;
+  in_stock: number | boolean;
+  image_url: string | null;
+  images: string[] | null;
+  reviews?: DirectusReview[];
+  videos?: DirectusVideo[];
 }
 
-interface StrapiReview {
+interface DirectusReview {
   id: number;
-  documentId: string;
   author: string;
   rating: number;
-  text: string;
-  isVerified: boolean;
-  createdAt: string;
-  product?: { documentId: string };
+  text: string | null;
+  avatar_url: string | null;
+  is_approved: boolean;
+  product_id: number | null;
+  date_created?: string;
 }
 
-interface StrapiQuestion {
+interface DirectusVideo {
   id: number;
-  documentId: string;
-  author: string;
-  question: string;
-  answer: string | null;
-  createdAt: string;
-  product?: { documentId: string };
+  title: string;
+  youtube_url: string | null;
+  description: string | null;
+  sort_order: number;
+  is_active: boolean;
+  product_id: number | null;
 }
 
-interface StrapiResponse<T> {
+interface DirectusFAQ {
+  id: number;
+  question: string;
+  answer: string;
+  sort_order: number;
+  category: string | null;
+}
+
+interface DirectusResponse<T> {
   data: T;
-  meta: {
-    pagination?: {
-      page: number;
-      pageSize: number;
-      pageCount: number;
-      total: number;
-    };
+  meta?: {
+    total_count?: number;
+    filter_count?: number;
   };
 }
 
-// Transform Strapi product to our Product type
-function transformProduct(strapiProduct: StrapiProduct): Product {
+// Transform Directus product to our Product type
+function transformProduct(dp: DirectusProduct): Product {
   let images: string[] = [];
 
-  if (strapiProduct.images && strapiProduct.images.length > 0) {
-    images = strapiProduct.images.map((img) =>
-      img.url.startsWith("http") ? img.url : `${STRAPI_URL}${img.url}`
-    );
+  if (dp.images && dp.images.length > 0) {
+    images = dp.images;
   } else {
-    // Берём ВСЕ картинки из localProducts (products.json)
-    const localProduct = localProducts.find(p => p.title === strapiProduct.title);
+    // Fallback to localProducts (products.json)
+    const localProduct = localProducts.find(p => p.title === dp.title);
     if (localProduct && localProduct.images) {
       images = localProduct.images;
-    } else if (strapiProduct.imageUrl) {
-      // Fallback на imageUrl если нет в products.json
-      const url = strapiProduct.imageUrl.startsWith("http") 
-        ? strapiProduct.imageUrl 
-        : `${STRAPI_URL}${strapiProduct.imageUrl}`;
-      images = [url];
+    } else if (dp.image_url) {
+      images = [dp.image_url];
     }
   }
 
   return {
-    id: strapiProduct.documentId,
-    handle: strapiProduct.documentId,
-    code: strapiProduct.documentId,
-    title: strapiProduct.title,
-    price: strapiProduct.price,
-    oldPrice: strapiProduct.oldPrice || undefined,
-    isOnSale: strapiProduct.isOnSale || false,
-    category: strapiProduct.category || "",
-    line: strapiProduct.line || "",
+    id: String(dp.id),
+    handle: String(dp.id),
+    code: String(dp.id),
+    title: dp.title,
+    price: parseFloat(dp.price) || 0,
+    oldPrice: dp.old_price ? parseFloat(dp.old_price) : undefined,
+    isOnSale: dp.is_on_sale === 1 || dp.is_on_sale === true,
+    category: dp.category || "",
+    line: dp.line || "",
     images,
-    description: strapiProduct.description || "",
-    rating: strapiProduct.rating || 0,
-    reviews: strapiProduct.reviewsCount || 0,
-    inStock: strapiProduct.inStock !== false,
-    videos: strapiProduct.videos?.map((video) => ({
+    description: dp.description || "",
+    rating: dp.rating ? parseFloat(dp.rating) : 0,
+    reviews: dp.reviews_count || 0,
+    inStock: dp.in_stock === 1 || dp.in_stock === true,
+    videos: dp.videos?.filter(v => v.is_active).map((video) => ({
       id: String(video.id),
       title: video.title,
-      type: video.type,
-      url: video.type === "local" && video.file
-        ? (video.file.url.startsWith("http") ? video.file.url : `${STRAPI_URL}${video.file.url}`)
-        : (video.externalUrl || ""),
-      thumbnail: video.thumbnail
-        ? (video.thumbnail.url.startsWith("http") ? video.thumbnail.url : `${STRAPI_URL}${video.thumbnail.url}`)
-        : undefined,
+      type: video.youtube_url ? "youtube" as const : "local" as const,
+      url: video.youtube_url || "",
+      thumbnail: undefined,
     })) || [],
   };
 }
@@ -146,39 +117,40 @@ export async function fetchProducts(params?: {
   try {
     const searchParams = new URLSearchParams();
 
-    if (params?.page) searchParams.set("pagination[page]", String(params.page));
-    if (params?.pageSize) searchParams.set("pagination[pageSize]", String(params.pageSize));
+    const page = params?.page || 1;
+    const pageSize = params?.pageSize || 25;
+    searchParams.set("page", String(page));
+    searchParams.set("limit", String(pageSize));
+    searchParams.set("meta", "total_count,filter_count");
 
     if (params?.category && params.category !== "all") {
-      searchParams.set("filters[category][$eq]", params.category);
+      searchParams.set("filter[category][_eq]", params.category);
     }
     if (params?.line && params.line !== "all") {
-      searchParams.set("filters[line][$eq]", params.line);
+      searchParams.set("filter[line][_eq]", params.line);
     }
 
     if (params?.sort) {
       switch (params.sort) {
         case "price-low":
-          searchParams.set("sort", "price:asc");
+          searchParams.set("sort", "price");
           break;
         case "price-high":
-          searchParams.set("sort", "price:desc");
+          searchParams.set("sort", "-price");
           break;
         case "rating":
-          searchParams.set("sort", "rating:desc");
+          searchParams.set("sort", "-rating");
           break;
         case "reviews":
-          searchParams.set("sort", "reviews:desc");
+          searchParams.set("sort", "-reviews_count");
           break;
         case "newest":
-          searchParams.set("sort", "createdAt:desc");
+          searchParams.set("sort", "-date_created");
           break;
         default:
-          searchParams.set("sort", "reviews:desc");
+          searchParams.set("sort", "-reviews_count");
       }
     }
-
-    searchParams.set("populate", "*");
 
     const response = await fetch(`${API_URL}/products?${searchParams.toString()}`);
 
@@ -186,12 +158,13 @@ export async function fetchProducts(params?: {
       throw new Error(`API Error: ${response.status}`);
     }
 
-    const data: StrapiResponse<StrapiProduct[]> = await response.json();
+    const data: DirectusResponse<DirectusProduct[]> = await response.json();
+    const total = data.meta?.filter_count || data.meta?.total_count || 0;
 
     return {
       products: data.data.map(transformProduct),
-      total: data.meta.pagination?.total || 0,
-      pageCount: data.meta.pagination?.pageCount || 1,
+      total,
+      pageCount: Math.ceil(total / pageSize),
     };
   } catch (error) {
     console.error("Error fetching products:", error);
@@ -207,17 +180,17 @@ export async function fetchProducts(params?: {
 export async function fetchProductById(id: string): Promise<Product | null> {
   try {
     const response = await fetch(
-      `${API_URL}/products?filters[documentId][$eq]=${id}&populate=*`
+      `${API_URL}/products/${id}?fields=*,reviews.*,videos.*`
     );
 
     if (!response.ok) {
       throw new Error(`API Error: ${response.status}`);
     }
 
-    const data: StrapiResponse<StrapiProduct[]> = await response.json();
+    const data: DirectusResponse<DirectusProduct> = await response.json();
 
-    if (data.data && data.data.length > 0) {
-      return transformProduct(data.data[0]);
+    if (data.data) {
+      return transformProduct(data.data);
     }
 
     return null;
@@ -234,14 +207,14 @@ export async function fetchProductById(id: string): Promise<Product | null> {
 export async function fetchAllProducts(): Promise<Product[]> {
   try {
     const response = await fetch(
-      `${API_URL}/products?pagination[pageSize]=100&populate=*`
+      `${API_URL}/products?limit=-1`
     );
 
     if (!response.ok) {
       throw new Error(`API Error: ${response.status}`);
     }
 
-    const data: StrapiResponse<StrapiProduct[]> = await response.json();
+    const data: DirectusResponse<DirectusProduct[]> = await response.json();
     return data.data.map(transformProduct);
   } catch (error) {
     console.error("Error fetching all products:", error);
@@ -261,22 +234,22 @@ export async function fetchProductReviews(productId: string): Promise<{
 }[]> {
   try {
     const response = await fetch(
-      `${API_URL}/reviews?filters[product][documentId][$eq]=${productId}&populate=*&sort=createdAt:desc`
+      `${API_URL}/reviews?filter[product_id][_eq]=${productId}&sort=-date_created`
     );
 
     if (!response.ok) {
       return [];
     }
 
-    const data: StrapiResponse<StrapiReview[]> = await response.json();
-    
+    const data: DirectusResponse<DirectusReview[]> = await response.json();
+
     return data.data.map((review) => ({
-      id: review.documentId,
+      id: String(review.id),
       author: review.author,
       rating: review.rating,
-      text: review.text,
-      isVerified: review.isVerified || false,
-      createdAt: review.createdAt,
+      text: review.text || "",
+      isVerified: review.is_approved || false,
+      createdAt: review.date_created || new Date().toISOString(),
     }));
   } catch (error) {
     console.error("Error fetching reviews:", error);
@@ -284,7 +257,7 @@ export async function fetchProductReviews(productId: string): Promise<{
   }
 }
 
-// Fetch questions for a product
+// Fetch questions for a product (not implemented in Directus yet - return empty)
 export async function fetchProductQuestions(productId: string): Promise<{
   id: string;
   author: string;
@@ -292,31 +265,10 @@ export async function fetchProductQuestions(productId: string): Promise<{
   answer: string | null;
   createdAt: string;
 }[]> {
-  try {
-    const response = await fetch(
-      `${API_URL}/questions?filters[product][documentId][$eq]=${productId}&populate=*&sort=createdAt:desc`
-    );
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data: StrapiResponse<StrapiQuestion[]> = await response.json();
-    
-    return data.data.map((q) => ({
-      id: q.documentId,
-      author: q.author,
-      question: q.question,
-      answer: q.answer,
-      createdAt: q.createdAt,
-    }));
-  } catch (error) {
-    console.error("Error fetching questions:", error);
-    return [];
-  }
+  return [];
 }
 
-// Create order in Strapi
+// Create order in Directus
 export async function createOrder(orderData: {
   items: Array<{
     productId: string;
@@ -335,63 +287,52 @@ export async function createOrder(orderData: {
   discount?: number;
 }): Promise<{ success: boolean; orderId?: number; error?: string }> {
   try {
+    const orderNumber = "HM-" + Date.now().toString(36).toUpperCase();
+
     const response = await fetch(`${API_URL}/orders`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        data: {
-          items: orderData.items,
-          total: orderData.total,
-          customerName: orderData.customerName,
-          customerPhone: orderData.customerPhone,
-          customerEmail: orderData.customerEmail || null,
-          address: orderData.address,
-          comment: orderData.comment || null,
-          deliveryMethod: orderData.deliveryMethod,
-          promoCode: orderData.promoCode || null,
-          discount: orderData.discount || 0,
-          status: "pending",
-        },
+        order_number: orderNumber,
+        customer_name: orderData.customerName,
+        customer_phone: orderData.customerPhone,
+        customer_email: orderData.customerEmail || null,
+        delivery_address: orderData.address,
+        delivery_method: orderData.deliveryMethod === "courier" ? "Курьер" : "Самовывоз",
+        payment_method: "Картой",
+        status: "Новый",
+        items: orderData.items,
+        total: orderData.total,
+        discount: orderData.discount || 0,
+        notes: orderData.comment || null,
       }),
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error?.message || `API Error: ${response.status}`);
+      throw new Error(errorData.errors?.[0]?.message || `API Error: ${response.status}`);
     }
 
     const data = await response.json();
     return { success: true, orderId: data.data.id };
   } catch (error) {
     console.error("Error creating order:", error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : "Ошибка при создании заказа" 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Ошибка при создании заказа"
     };
   }
 }
 
-// Fetch FAQ data
+// Fetch FAQ data (legacy - kept for compatibility)
 export async function fetchFAQ(): Promise<{ question: string; answer: string }[]> {
-  try {
-    const response = await fetch(`${API_URL}/faq`);
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-    return data.data?.items || [];
-  } catch (error) {
-    console.error("Error fetching FAQ:", error);
-    return [];
-  }
+  return fetchFAQItems();
 }
 
 export function getStrapiUrl(): string {
-  return STRAPI_URL;
+  return DIRECTUS_URL;
 }
 
 // Create review
@@ -406,14 +347,11 @@ export async function createReview(data: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        data: {
-          product: data.productId,
-          author: data.author,
-          rating: data.rating,
-          text: data.text,
-          isVerified: false,
-          publishedAt: new Date().toISOString(),
-        },
+        product_id: parseInt(data.productId) || null,
+        author: data.author,
+        rating: data.rating,
+        text: data.text,
+        is_approved: false,
       }),
     });
     return response.ok;
@@ -423,50 +361,35 @@ export async function createReview(data: {
   }
 }
 
-// Create question
+// Create question (not implemented in Directus yet)
 export async function createQuestion(data: {
   productId: string;
   author: string;
   question: string;
 }): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_URL}/questions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        data: {
-          product: data.productId,
-          author: data.author,
-          question: data.question,
-          publishedAt: new Date().toISOString(),
-        },
-      }),
-    });
-    return response.ok;
-  } catch (error) {
-    console.error("Error creating question:", error);
-    return false;
-  }
+  console.warn("Questions not yet implemented in Directus");
+  return false;
 }
-// Fetch FAQ items from Strapi
+
+// Fetch FAQ items from Directus
 export async function fetchFAQItems(): Promise<{ id: number; question: string; answer: string; category?: string; order?: number }[]> {
   try {
-    const response = await fetch(`${API_URL}/faqs?sort=order:asc`);
+    const response = await fetch(`${API_URL}/faqs?sort=sort_order`);
 
     if (!response.ok) {
       console.error("FAQ API Error:", response.status);
       return [];
     }
 
-    const data = await response.json();
-    
+    const data: DirectusResponse<DirectusFAQ[]> = await response.json();
+
     if (data.data && data.data.length > 0) {
-      return data.data.map((item: any) => ({
+      return data.data.map((item) => ({
         id: item.id,
         question: item.question,
         answer: item.answer,
-        category: item.category,
-        order: item.order
+        category: item.category || undefined,
+        order: item.sort_order
       }));
     }
     return [];
