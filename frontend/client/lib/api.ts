@@ -404,3 +404,27 @@ export async function fetchFAQItems(): Promise<{ id: number; question: string; a
     return [];
   }
 }
+
+// Fetch banners from Directus
+export async function fetchBanners(): Promise<{ id: number; title: string; imageUrl: string; link: string; sortOrder: number }[]> {
+  try {
+    const response = await fetch(`${API_URL}/banners?filter[is_active][_eq]=true&sort=sort_order`);
+
+    if (!response.ok) {
+      return [];
+    }
+
+    const data: DirectusResponse<{ id: number; title: string; image_url: string | null; link: string | null; sort_order: number; is_active: boolean }[]> = await response.json();
+
+    return data.data.map((b) => ({
+      id: b.id,
+      title: b.title || "",
+      imageUrl: b.image_url || "",
+      link: b.link || "",
+      sortOrder: b.sort_order || 0,
+    }));
+  } catch (error) {
+    console.error("Error fetching banners:", error);
+    return [];
+  }
+}

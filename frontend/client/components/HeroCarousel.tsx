@@ -1,20 +1,39 @@
 import useEmblaCarousel from "embla-carousel-react";
 import { useCallback, useEffect, useState } from "react";
 import Autoplay from "embla-carousel-autoplay";
+import { Link } from "react-router-dom";
+import { fetchBanners } from "@/lib/api";
 
-const HERO_SLIDES = [
+const FALLBACK_SLIDES = [
   {
     id: 1,
-    image: "/banners/heimish_hero.jpg",
-    alt: "Heimish Skincare - Korean Beauty",
+    imageUrl: "/banners/heimish_hero.jpg",
+    title: "Heimish Skincare - Korean Beauty",
+    link: "",
   },
 ];
+
+interface Slide {
+  id: number;
+  imageUrl: string;
+  title: string;
+  link: string;
+}
 
 export default function HeroCarousel() {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [
     Autoplay({ delay: 5000, stopOnInteraction: false }),
   ]);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [slides, setSlides] = useState<Slide[]>(FALLBACK_SLIDES);
+
+  useEffect(() => {
+    fetchBanners().then((banners) => {
+      if (banners.length > 0) {
+        setSlides(banners);
+      }
+    });
+  }, []);
 
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
@@ -34,22 +53,32 @@ export default function HeroCarousel() {
     <div className="relative w-full overflow-hidden">
       <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex">
-          {HERO_SLIDES.map((slide) => (
+          {slides.map((slide) => (
             <div key={slide.id} className="flex-[0_0_100%] min-w-0">
-              <div className="relative w-full">
-                <img
-                  src={slide.image}
-                  alt={slide.alt}
-                  className="w-full h-auto object-cover"
-                />
-              </div>
+              {slide.link ? (
+                <Link to={slide.link} className="relative w-full block">
+                  <img
+                    src={slide.imageUrl}
+                    alt={slide.title}
+                    className="w-full h-auto object-cover"
+                  />
+                </Link>
+              ) : (
+                <div className="relative w-full">
+                  <img
+                    src={slide.imageUrl}
+                    alt={slide.title}
+                    className="w-full h-auto object-cover"
+                  />
+                </div>
+              )}
             </div>
           ))}
         </div>
       </div>
-      {HERO_SLIDES.length > 1 && (
+      {slides.length > 1 && (
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2.5">
-          {HERO_SLIDES.map((_, index) => (
+          {slides.map((_, index) => (
             <button
               key={index}
               onClick={() => emblaApi?.scrollTo(index)}
