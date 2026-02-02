@@ -1,0 +1,4 @@
+<IfModule mod_proxy.c>
+    ProxyPass / http://127.0.0.1:1337/
+    ProxyPassReverse / http://127.0.0.1:1337/
+</IfModule>

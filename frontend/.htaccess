@@ -1,0 +1,31 @@
+DirectoryIndex index.html
+
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
+RewriteEngine On
+RewriteBase /
+
+# Admin панель Strapi - через mod_rewrite proxy
+RewriteRule ^admin$ http://127.0.0.1:1337/admin [P,L]
+RewriteRule ^admin/(.*)$ http://127.0.0.1:1337/admin/$1 [P,L]
+
+# Content Manager API
+RewriteRule ^content-manager/(.*)$ http://127.0.0.1:1337/content-manager/$1 [P,L]
+
+# Upload API
+RewriteRule ^upload/(.*)$ http://127.0.0.1:1337/upload/$1 [P,L]
+
+# Strapi API через прокси
+RewriteRule ^strapi-api/(.*)$ http://127.0.0.1:1337/$1 [P,L]
+RewriteRule ^strapi-api/?$ http://127.0.0.1:1337/ [P,L]
+
+# API роуты
+RewriteRule ^api/(.*)$ http://127.0.0.1:1337/api/$1 [P,L]
+
+# Существующие файлы
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# SPA fallback (React)
+RewriteRule ^(.*)$ index.html [L]
