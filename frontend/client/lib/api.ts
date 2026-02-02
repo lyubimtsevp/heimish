@@ -414,12 +414,12 @@ export async function fetchBanners(): Promise<{ id: number; title: string; image
       return [];
     }
 
-    const data: DirectusResponse<{ id: number; title: string; image_url: string | null; link: string | null; sort_order: number; is_active: boolean }[]> = await response.json();
+    const data: DirectusResponse<{ id: number; title: string; image: string | null; image_url: string | null; link: string | null; sort_order: number; is_active: boolean }[]> = await response.json();
 
     return data.data.map((b) => ({
       id: b.id,
       title: b.title || "",
-      imageUrl: b.image_url || "",
+      imageUrl: b.image ? `${DIRECTUS_URL}/assets/${b.image}` : (b.image_url || ""),
       link: b.link || "",
       sortOrder: b.sort_order || 0,
     }));
