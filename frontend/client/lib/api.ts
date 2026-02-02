@@ -47,7 +47,8 @@ interface DirectusReview {
 interface DirectusVideo {
   id: number;
   title: string;
-  youtube_url: string | null;
+  video_url: string | null;
+  video_file: string | null;
   description: string | null;
   sort_order: number;
   is_active: boolean;
@@ -112,13 +113,22 @@ function transformProduct(dp: DirectusProduct): Product {
     usageInstructions: dp.usage_instructions || undefined,
     deliveryInfo: dp.delivery_info || undefined,
     isBest: dp.is_best === 1 || dp.is_best === true,
-    videos: dp.videos?.filter(v => v.is_active).map((video) => ({
-      id: String(video.id),
-      title: video.title,
-      type: video.youtube_url ? "youtube" as const : "local" as const,
-      url: video.youtube_url || "",
-      thumbnail: undefined,
-    })) || [],
+    videos: dp.videos?.filter(v => v.is_active).map((video) => {
+      const url = video.video_url || (video.video_file ? `${DIRECTUS_URL}/assets/${video.video_file}` : "");
+      const isFile = !!video.video_file && !video.video_url;
+      const type = url.match(/youtube\.com|youtu\.be/) ? "youtube" as const
+        : url.match(/rutube\.ru/) ? "rutube" as const
+        : isFile ? "local" as const
+        : "embed" as const;
+      const ytId = type === "youtube" ? (url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/) || [])[1] : null;
+      return {
+        id: String(video.id),
+        title: video.title,
+        type,
+        url,
+        thumbnail: ytId ? `https://img.youtube.com/vi/${ytId}/mqdefault.jpg` : undefined,
+      };
+    }).filter(v => v.url) || [],
   };
 }
 
@@ -134,6 +144,7 @@ export async function fetchProducts(params?: {
     const searchParams = new URLSearchParams();
     searchParams.append("fields[]", "*");
     searchParams.append("fields[]", "gallery.directus_files_id");
+    searchParams.append("fields[]", "videos.*");
 
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 25;
@@ -198,7 +209,7 @@ export async function fetchProducts(params?: {
 export async function fetchProductById(id: string): Promise<Product | null> {
   try {
     const response = await fetch(
-      `${API_URL}/products/${id}?fields[]=*&fields[]=gallery.directus_files_id`
+      `${API_URL}/products/${id}?fields[]=*&fields[]=gallery.directus_files_id&fields[]=videos.*`
     );
 
     if (!response.ok) {
@@ -225,7 +236,7 @@ export async function fetchProductById(id: string): Promise<Product | null> {
 export async function fetchAllProducts(): Promise<Product[]> {
   try {
     const response = await fetch(
-      `${API_URL}/products?limit=-1&fields[]=*&fields[]=gallery.directus_files_id`
+      `${API_URL}/products?limit=-1&fields[]=*&fields[]=gallery.directus_files_id&fields[]=videos.*`
     );
 
     if (!response.ok) {

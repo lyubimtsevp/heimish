@@ -4,7 +4,7 @@ import { Play, X } from "lucide-react";
 interface Video {
   id?: string;
   title?: string;
-  type: "local" | "rutube" | "youtube";
+  type: "local" | "rutube" | "youtube" | "embed";
   url: string;
   thumbnail?: string;
 }
@@ -137,6 +137,16 @@ export default function VideoPlayer({ videos }: VideoPlayerProps) {
                 className="w-full h-full rounded-lg"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            )}
+
+            {activeVideo.type === "embed" && (
+              <iframe
+                src={activeVideo.url}
+                className="w-full h-full rounded-lg"
+                frameBorder="0"
+                allow="autoplay; fullscreen; picture-in-picture"
                 allowFullScreen
               />
             )}

@@ -1,7 +1,7 @@
 export interface ProductVideo {
     id?: string;
     title?: string;
-    type: "local" | "rutube" | "youtube";
+    type: "local" | "rutube" | "youtube" | "embed";
     url: string;
     thumbnail?: string;
 }
