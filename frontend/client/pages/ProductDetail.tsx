@@ -193,34 +193,18 @@ export default function ProductDetail() {
         if (!product?.id) return;
         
         setSubmitting(true);
-        try {
-            const STRAPI_URL = import.meta.env.VITE_STRAPI_URL || "https://heimish.ru/strapi-api";
-            const response = await fetch(`${STRAPI_URL}/api/reviews`, {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json",
-                    ...(token && { "Authorization": `Bearer ${token}` })
-                },
-                body: JSON.stringify({
-                    data: {
-                        author: user?.username || "Пользователь",
-                        rating: reviewForm.rating,
-                        text: reviewForm.text,
-                        product: product.id,
-                        isVerified: true, // Verified because user is logged in
-                    },
-                }),
-            });
-            if (response.ok) {
-                setReviewForm({ rating: 5, text: "" });
-                setShowReviewForm(false);
-                fetchProductReviews(product.id).then(setReviews);
-                toast.success("Отзыв отправлен!");
-            } else {
-                toast.error("Ошибка при отправке отзыва");
-            }
-        } catch (error) {
-            console.error("Failed to submit review:", error);
+        const success = await createReview({
+            productId: product.id,
+            author: user?.username || "Пользователь",
+            rating: reviewForm.rating,
+            text: reviewForm.text,
+        });
+        if (success) {
+            setReviewForm({ rating: 5, text: "" });
+            setShowReviewForm(false);
+            fetchProductReviews(product.id).then(setReviews);
+            toast.success("Отзыв отправлен!");
+        } else {
             toast.error("Ошибка при отправке отзыва");
         }
         setSubmitting(false);
@@ -233,34 +217,19 @@ export default function ProductDetail() {
             return;
         }
         if (!product?.id) return;
-        
+
         setSubmitting(true);
-        try {
-            const STRAPI_URL = import.meta.env.VITE_STRAPI_URL || "https://heimish.ru/strapi-api";
-            const response = await fetch(`${STRAPI_URL}/api/questions`, {
-                method: "POST",
-                headers: { 
-                    "Content-Type": "application/json",
-                    ...(token && { "Authorization": `Bearer ${token}` })
-                },
-                body: JSON.stringify({
-                    data: {
-                        author: user?.username || "Пользователь",
-                        question: questionForm.question,
-                        product: product.id,
-                    },
-                }),
-            });
-            if (response.ok) {
-                setQuestionForm({ question: "" });
-                setShowQuestionForm(false);
-                fetchProductQuestions(product.id).then(setQuestions);
-                toast.success("Вопрос отправлен!");
-            } else {
-                toast.error("Ошибка при отправке вопроса");
-            }
-        } catch (error) {
-            console.error("Failed to submit question:", error);
+        const success = await createQuestion({
+            productId: product.id,
+            author: user?.username || "Пользователь",
+            question: questionForm.question,
+        });
+        if (success) {
+            setQuestionForm({ question: "" });
+            setShowQuestionForm(false);
+            fetchProductQuestions(product.id).then(setQuestions);
+            toast.success("Вопрос отправлен!");
+        } else {
             toast.error("Ошибка при отправке вопроса");
         }
         setSubmitting(false);

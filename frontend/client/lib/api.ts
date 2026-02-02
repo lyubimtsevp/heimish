@@ -180,7 +180,7 @@ export async function fetchProducts(params?: {
 export async function fetchProductById(id: string): Promise<Product | null> {
   try {
     const response = await fetch(
-      `${API_URL}/products/${id}?fields=*,reviews.*,videos.*`
+      `${API_URL}/products/${id}`
     );
 
     if (!response.ok) {
