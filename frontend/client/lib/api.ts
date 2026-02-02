@@ -28,6 +28,7 @@ interface DirectusProduct {
   usage_instructions: string | null;
   delivery_info: string | null;
   is_best: number | boolean;
+  gallery?: { directus_files_id: string }[] | null;
   reviews?: DirectusReview[];
   videos?: DirectusVideo[];
 }
@@ -73,15 +74,22 @@ interface DirectusResponse<T> {
 function transformProduct(dp: DirectusProduct): Product {
   let images: string[] = [];
 
+  // Combine gallery (M2M files) + old images JSON field
+  if (dp.gallery && dp.gallery.length > 0) {
+    images.push(...dp.gallery.map(g => `${DIRECTUS_URL}/assets/${g.directus_files_id}`));
+  }
   if (dp.images && dp.images.length > 0) {
-    images = dp.images;
-  } else {
+    images.push(...dp.images);
+  }
+  // Also include image_url if not already present
+  if (dp.image_url && !images.includes(dp.image_url)) {
+    images.push(dp.image_url);
+  }
+  if (images.length === 0) {
     // Fallback to localProducts (products.json)
     const localProduct = localProducts.find(p => p.title === dp.title);
     if (localProduct && localProduct.images) {
       images = localProduct.images;
-    } else if (dp.image_url) {
-      images = [dp.image_url];
     }
   }
 
@@ -124,6 +132,8 @@ export async function fetchProducts(params?: {
 }): Promise<{ products: Product[]; total: number; pageCount: number }> {
   try {
     const searchParams = new URLSearchParams();
+    searchParams.append("fields[]", "*");
+    searchParams.append("fields[]", "gallery.directus_files_id");
 
     const page = params?.page || 1;
     const pageSize = params?.pageSize || 25;
@@ -188,7 +198,7 @@ export async function fetchProducts(params?: {
 export async function fetchProductById(id: string): Promise<Product | null> {
   try {
     const response = await fetch(
-      `${API_URL}/products/${id}`
+      `${API_URL}/products/${id}?fields[]=*&fields[]=gallery.directus_files_id`
     );
 
     if (!response.ok) {
@@ -215,7 +225,7 @@ export async function fetchProductById(id: string): Promise<Product | null> {
 export async function fetchAllProducts(): Promise<Product[]> {
   try {
     const response = await fetch(
-      `${API_URL}/products?limit=-1`
+      `${API_URL}/products?limit=-1&fields[]=*&fields[]=gallery.directus_files_id`
     );
 
     if (!response.ok) {
