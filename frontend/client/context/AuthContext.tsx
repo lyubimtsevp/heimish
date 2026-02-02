@@ -59,25 +59,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = await response.json();
 
             if (!response.ok) {
-                return {
-                    success: false,
-                    error: data.errors?.[0]?.message || "Неверный email или пароль"
-                };
+                const msg = data.errors?.[0]?.message || "";
+                let error = "Неверный email или пароль";
+                if (msg.includes("Invalid user credentials")) {
+                    error = "Неверный email или пароль";
+                } else if (msg) {
+                    error = msg;
+                }
+                return { success: false, error };
             }
 
             const accessToken = data.data.access_token;
 
             // Fetch user profile
-            const meResponse = await fetch(`${DIRECTUS_URL}/users/me`, {
-                headers: { "Authorization": `Bearer ${accessToken}` },
-            });
-            const meData = await meResponse.json();
+            let userName = identifier.split("@")[0];
+            let userEmail = identifier;
+            let userId = "";
+            try {
+                const meResponse = await fetch(`${DIRECTUS_URL}/users/me`, {
+                    headers: { "Authorization": `Bearer ${accessToken}` },
+                });
+                const meData = await meResponse.json();
+                userId = meData.data?.id || "";
+                userName = meData.data?.first_name || meData.data?.email?.split("@")[0] || userName;
+                userEmail = meData.data?.email || userEmail;
+            } catch {}
 
             setToken(accessToken);
             setUser({
-                id: meData.data.id,
-                username: meData.data.first_name || meData.data.email.split("@")[0],
-                email: meData.data.email,
+                id: userId,
+                username: userName,
+                email: userEmail,
             });
             return { success: true };
         } catch (error) {
@@ -98,9 +110,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 }),
             });
 
-            const data = await response.json();
-
             if (!response.ok) {
+                const data = await response.json().catch(() => ({}));
                 let errorMessage = "Ошибка регистрации";
                 const msg = data.errors?.[0]?.message || "";
                 if (msg.includes("unique") || msg.includes("email")) {
@@ -112,7 +123,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
 
             // Auto-login after registration
-            return login(email, password);
+            const loginResult = await login(email, password);
+            if (!loginResult.success) {
+                // Registration returned 204 but login failed = email already registered with different password
+                return { success: false, error: "Этот email уже зарегистрирован. Попробуйте войти." };
+            }
+            return loginResult;
         } catch (error) {
             console.error("Register error:", error);
             return { success: false, error: "Ошибка подключения к серверу" };
