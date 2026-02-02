@@ -21,6 +21,9 @@ export interface Product {
     rating: number;
     reviews: number;
     inStock: boolean;
+    ingredients?: string;
+    usageInstructions?: string;
+    deliveryInfo?: string;
     videos?: ProductVideo[];
 }
 

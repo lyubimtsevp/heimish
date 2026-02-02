@@ -24,6 +24,9 @@ interface DirectusProduct {
   in_stock: number | boolean;
   image_url: string | null;
   images: string[] | null;
+  ingredients: string | null;
+  usage_instructions: string | null;
+  delivery_info: string | null;
   reviews?: DirectusReview[];
   videos?: DirectusVideo[];
 }
@@ -96,6 +99,9 @@ function transformProduct(dp: DirectusProduct): Product {
     rating: dp.rating ? parseFloat(dp.rating) : 0,
     reviews: dp.reviews_count || 0,
     inStock: dp.in_stock === 1 || dp.in_stock === true,
+    ingredients: dp.ingredients || undefined,
+    usageInstructions: dp.usage_instructions || undefined,
+    deliveryInfo: dp.delivery_info || undefined,
     videos: dp.videos?.filter(v => v.is_active).map((video) => ({
       id: String(video.id),
       title: video.title,
