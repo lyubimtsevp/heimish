@@ -1,8 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
+const DIRECTUS_URL = import.meta.env.VITE_DIRECTUS_URL || "https://heimish.ru/directus";
+
 interface User {
-    id: number;
-    documentId: string;
+    id: string;
     username: string;
     email: string;
 }
@@ -19,8 +20,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const STRAPI_URL = import.meta.env.VITE_STRAPI_URL || "https://heimish.ru/strapi-api";
-
 export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
@@ -30,7 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         const storedToken = localStorage.getItem("authToken");
         const storedUser = localStorage.getItem("authUser");
-        
+
         if (storedToken && storedUser) {
             setToken(storedToken);
             setUser(JSON.parse(storedUser));
@@ -51,23 +50,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (identifier: string, password: string): Promise<{ success: boolean; error?: string }> => {
         try {
-            const response = await fetch(`${STRAPI_URL}/api/auth/local`, {
+            const response = await fetch(`${DIRECTUS_URL}/auth/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ identifier, password }),
+                body: JSON.stringify({ email: identifier, password }),
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                return { 
-                    success: false, 
-                    error: data.error?.message || "Неверный email или пароль" 
+                return {
+                    success: false,
+                    error: data.errors?.[0]?.message || "Неверный email или пароль"
                 };
             }
 
-            setToken(data.jwt);
-            setUser(data.user);
+            const accessToken = data.data.access_token;
+
+            // Fetch user profile
+            const meResponse = await fetch(`${DIRECTUS_URL}/users/me`, {
+                headers: { "Authorization": `Bearer ${accessToken}` },
+            });
+            const meData = await meResponse.json();
+
+            setToken(accessToken);
+            setUser({
+                id: meData.data.id,
+                username: meData.data.first_name || meData.data.email.split("@")[0],
+                email: meData.data.email,
+            });
             return { success: true };
         } catch (error) {
             console.error("Login error:", error);
@@ -77,31 +88,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const register = async (username: string, email: string, password: string): Promise<{ success: boolean; error?: string }> => {
         try {
-            const response = await fetch(`${STRAPI_URL}/api/auth/local/register`, {
+            const response = await fetch(`${DIRECTUS_URL}/users/register`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username, email, password }),
+                body: JSON.stringify({
+                    first_name: username,
+                    email,
+                    password,
+                }),
             });
 
             const data = await response.json();
 
             if (!response.ok) {
                 let errorMessage = "Ошибка регистрации";
-                if (data.error?.message) {
-                    if (data.error.message.includes("Email")) {
-                        errorMessage = "Этот email уже зарегистрирован";
-                    } else if (data.error.message.includes("Username")) {
-                        errorMessage = "Это имя пользователя уже занято";
-                    } else {
-                        errorMessage = data.error.message;
-                    }
+                const msg = data.errors?.[0]?.message || "";
+                if (msg.includes("unique") || msg.includes("email")) {
+                    errorMessage = "Этот email уже зарегистрирован";
+                } else if (msg) {
+                    errorMessage = msg;
                 }
                 return { success: false, error: errorMessage };
             }
 
-            setToken(data.jwt);
-            setUser(data.user);
-            return { success: true };
+            // Auto-login after registration
+            return login(email, password);
         } catch (error) {
             console.error("Register error:", error);
             return { success: false, error: "Ошибка подключения к серверу" };
