@@ -171,7 +171,7 @@ export default function Header() {
           {/* Logo */}
           <Link to="/" className="flex-shrink-0 absolute left-1/2 -translate-x-1/2">
             <img
-              src="/heimish_logo.svg"
+              src="/heimish_logo.png"
               alt="heimish"
               className="h-7 sm:h-8"
             />
