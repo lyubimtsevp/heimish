@@ -12,7 +12,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Product, SortOption, SORT_OPTIONS } from "@/types/product";
-import { fetchAllProducts } from "@/lib/api";
+import { fetchAllProducts, fetchCategories, fetchLines } from "@/lib/api";
 
 // Format price with thousands separator
 function formatPrice(price: number): string {
@@ -67,31 +67,9 @@ function ProductCard({ product }: { product: Product }) {
     );
 }
 
-// Category definitions
-const CATEGORIES = [
-    { id: "all", label: "ВСЕ" },
-    { id: "best", label: "ЛУЧШЕЕ" },
-    { id: "Очищение", label: "ОЧИЩЕНИЕ" },
-    { id: "Сыворотки", label: "СЫВОРОТКИ" },
-    { id: "Кремы", label: "КРЕМЫ" },
-    { id: "Тонеры", label: "ТОНЕРЫ" },
-    { id: "Маски", label: "МАСКИ" },
-    { id: "Солнцезащита", label: "ЗАЩИТА" },
-    { id: "Макияж", label: "МАКИЯЖ" },
-    { id: "Уход", label: "УХОД" },
-];
-
-const FILTER_LINES = [
-    { id: "all", label: "Все линейки" },
-    { id: "All Clean", label: "All Clean" },
-    { id: "RX", label: "RX" },
-    { id: "Matcha Biome", label: "Matcha Biome" },
-    { id: "Moringa", label: "Moringa" },
-    { id: "Marine Care", label: "Marine Care" },
-    { id: "Dailism", label: "Dailism" },
-    { id: "Artless", label: "Artless" },
-    { id: "Bulgarian Rose", label: "Bulgarian Rose" },
-];
+// Static fallback categories/lines
+const STATIC_CATEGORIES = ["Очищение", "Сыворотки", "Кремы", "Тонеры", "Маски", "Солнцезащита", "Макияж", "Уход"];
+const STATIC_LINES = ["All Clean", "RX", "Matcha Biome", "Moringa", "Marine Care", "Dailism", "Artless", "Bulgarian Rose"];
 
 export default function All() {
     const [searchParams, setSearchParams] = useSearchParams();
@@ -99,14 +77,22 @@ export default function All() {
     const [sortOption, setSortOption] = useState<SortOption>("popularity");
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const [dynamicCategories, setDynamicCategories] = useState<string[]>(STATIC_CATEGORIES);
+    const [dynamicLines, setDynamicLines] = useState<string[]>(STATIC_LINES);
 
-    // Fetch products from Strapi API
+    // Fetch products and dynamic categories/lines
     useEffect(() => {
         async function loadProducts() {
             setLoading(true);
             try {
-                const fetchedProducts = await fetchAllProducts();
+                const [fetchedProducts, cats, lns] = await Promise.all([
+                    fetchAllProducts(),
+                    fetchCategories(),
+                    fetchLines(),
+                ]);
                 setProducts(fetchedProducts);
+                if (cats.length > 0) setDynamicCategories(cats);
+                if (lns.length > 0) setDynamicLines(lns);
             } catch (error) {
                 console.error("Error loading products:", error);
             } finally {
@@ -119,6 +105,18 @@ export default function All() {
     // Get category and line from URL - reactive to URL changes
     const selectedCategory = searchParams.get("category") || "all";
     const selectedLine = searchParams.get("line") || "all";
+
+    // Build dynamic CATEGORIES and FILTER_LINES from fetched data
+    const CATEGORIES = useMemo(() => [
+        { id: "all", label: "ВСЕ" },
+        { id: "best", label: "ЛУЧШЕЕ" },
+        ...dynamicCategories.map(c => ({ id: c, label: c.toUpperCase() })),
+    ], [dynamicCategories]);
+
+    const FILTER_LINES = useMemo(() => [
+        { id: "all", label: "Все линейки" },
+        ...dynamicLines.map(l => ({ id: l, label: l })),
+    ], [dynamicLines]);
 
     // Calculate category counts
     const categoryCounts = useMemo(() => {

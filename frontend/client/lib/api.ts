@@ -486,3 +486,29 @@ export async function fetchBanners(): Promise<{ id: number; title: string; image
     return [];
   }
 }
+
+// Fetch distinct categories from products
+export async function fetchCategories(): Promise<string[]> {
+  try {
+    const response = await fetch(`${API_URL}/products?limit=-1&fields[]=category&filter[category][_nnull]=true`);
+    if (!response.ok) return [];
+    const data: DirectusResponse<{ category: string }[]> = await response.json();
+    const unique = [...new Set(data.data.map(p => p.category).filter(Boolean))];
+    return unique.sort();
+  } catch {
+    return [];
+  }
+}
+
+// Fetch distinct lines from products
+export async function fetchLines(): Promise<string[]> {
+  try {
+    const response = await fetch(`${API_URL}/products?limit=-1&fields[]=line&filter[line][_nnull]=true`);
+    if (!response.ok) return [];
+    const data: DirectusResponse<{ line: string }[]> = await response.json();
+    const unique = [...new Set(data.data.map(p => p.line).filter(Boolean))];
+    return unique.sort();
+  } catch {
+    return [];
+  }
+}

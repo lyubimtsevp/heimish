@@ -6,6 +6,7 @@ import { useCart } from "@/context/CartContext";
 import SearchModal from "@/components/SearchModal";
 import AuthModal from "@/components/AuthModal";
 import { useAuth } from "@/context/AuthContext";
+import { fetchCategories, fetchLines } from "@/lib/api";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -65,35 +66,43 @@ export default function Header() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const [dynCategories, setDynCategories] = useState<string[]>([]);
+  const [dynLines, setDynLines] = useState<string[]>([]);
+
+  useEffect(() => {
+    fetchCategories().then(c => { if (c.length > 0) setDynCategories(c); });
+    fetchLines().then(l => { if (l.length > 0) setDynLines(l); });
+  }, []);
+
   const megaMenuCategories = {
     all: [
       { title: t("mega.all"), link: "/all", isBold: true },
       { title: t("nav.best"), link: "/best", isBold: true },
     ],
-    makeup: [
-      { title: t("mega.makeup"), link: "/all?category=Макияж", isBold: true },
-      { title: t("mega.base_sun"), link: "/all?category=Солнцезащита" },
-      { title: t("mega.face"), link: "/all?category=Кремы" },
-      { title: t("mega.mascara"), link: "/all?category=Макияж" },
-    ],
     category: [
       { title: t("mega.category"), link: "/all", isBold: true },
-      { title: t("mega.cleanser"), link: "/all?category=Очищение" },
-      { title: t("mega.toner"), link: "/all?category=Тонеры" },
-      { title: t("mega.serum"), link: "/all?category=Сыворотки" },
-      { title: t("mega.cream"), link: "/all?category=Кремы" },
-      { title: t("mega.mask_patch"), link: "/all?category=Маски" },
-      { title: t("mega.hair"), link: "/all?category=Волосы" },
-      { title: t("mega.acc"), link: "/all" },
+      ...(dynCategories.length > 0
+        ? dynCategories.map(c => ({ title: c, link: `/all?category=${c}` }))
+        : [
+            { title: t("mega.cleanser"), link: "/all?category=Очищение" },
+            { title: t("mega.toner"), link: "/all?category=Тонеры" },
+            { title: t("mega.serum"), link: "/all?category=Сыворотки" },
+            { title: t("mega.cream"), link: "/all?category=Кремы" },
+            { title: t("mega.mask_patch"), link: "/all?category=Маски" },
+            { title: t("mega.hair"), link: "/all?category=Волосы" },
+          ]),
     ],
     line: [
       { title: t("mega.line"), link: "/all", isBold: true },
-      { title: "RX", link: "/all?line=RX" },
-      { title: "ALL CLEAN", link: "/all?line=All Clean" },
-      { title: "MARINE CARE", link: "/all?line=Marine Care" },
-      { title: "ROSE", link: "/all?line=Bulgarian Rose" },
-      { title: "MATCHA BIOME", link: "/all?line=Matcha Biome" },
-      { title: "MORINGA CERAMIDE", link: "/all?line=Moringa" },
+      ...(dynLines.length > 0
+        ? dynLines.map(l => ({ title: l.toUpperCase(), link: `/all?line=${l}` }))
+        : [
+            { title: "RX", link: "/all?line=RX" },
+            { title: "ALL CLEAN", link: "/all?line=All Clean" },
+            { title: "MARINE CARE", link: "/all?line=Marine Care" },
+            { title: "MATCHA BIOME", link: "/all?line=Matcha Biome" },
+            { title: "MORINGA CERAMIDE", link: "/all?line=Moringa" },
+          ]),
     ],
     concern: [
       { title: t("mega.concern"), link: "/all", isBold: true },
@@ -110,7 +119,6 @@ export default function Header() {
     { key: "all", title: "ВСЕ ТОВАРЫ", items: megaMenuCategories.all },
     { key: "category", title: "КАТЕГОРИИ", items: megaMenuCategories.category.slice(1) },
     { key: "line", title: "ЛИНИИ", items: megaMenuCategories.line.slice(1) },
-    { key: "makeup", title: "МАКИЯЖ", items: megaMenuCategories.makeup.slice(1) },
     { key: "concern", title: "ПО ПРОБЛЕМЕ", items: megaMenuCategories.concern.slice(1) },
   ];
 
@@ -242,31 +250,6 @@ export default function Header() {
                         >
                           {item.title}
                         </Link>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* MAKE-UP Column */}
-                  <div className="flex flex-col min-w-[130px]">
-                    {megaMenuCategories.makeup.map((item, idx) => (
-                      <div key={idx} className="pb-5">
-                        {item.isBold ? (
-                          <Link
-                            to={item.link}
-                            onClick={closeMenu}
-                            className="block pb-0.5 border-b border-heimish-gray-dark font-poppins font-semibold text-base text-heimish-gray-dark"
-                          >
-                            {item.title}
-                          </Link>
-                        ) : (
-                          <Link
-                            to={item.link}
-                            onClick={closeMenu}
-                            className="font-poppins font-medium text-[15px] text-heimish-gray hover:text-heimish-black transition-colors"
-                          >
-                            {item.title}
-                          </Link>
-                        )}
                       </div>
                     ))}
                   </div>

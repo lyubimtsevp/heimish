@@ -1,7 +1,9 @@
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { fetchCategories } from "@/lib/api";
 
-const categories = [
-  { id: "ALL", label: "ВСЕ", param: null },
+const STATIC_CATEGORIES = [
+  { id: "ALL", label: "ВСЕ", param: null as string | null },
   { id: "CLEANSING", label: "ОЧИЩЕНИЕ", param: "Очищение" },
   { id: "SERUMS", label: "СЫВОРОТКИ", param: "Сыворотки" },
   { id: "CREAMS", label: "КРЕМЫ", param: "Кремы" },
@@ -9,33 +11,40 @@ const categories = [
   { id: "SUN", label: "ЗАЩИТА", param: "Солнцезащита" },
 ];
 
-export default function CategoryTabs() {
-  const location = useLocation();
+interface Props {
+  activeCategory?: string;
+}
+
+export default function CategoryTabs({ activeCategory }: Props) {
   const [searchParams] = useSearchParams();
+  const [categories, setCategories] = useState(STATIC_CATEGORIES);
 
-  // Get category from URL
+  useEffect(() => {
+    fetchCategories().then(cats => {
+      if (cats.length > 0) {
+        setCategories([
+          { id: "ALL", label: "ВСЕ", param: null as string | null },
+          ...cats.map(c => ({ id: c.toUpperCase(), label: c.toUpperCase(), param: c })),
+        ]);
+      }
+    });
+  }, []);
+
   const currentCategory = searchParams.get("category");
-  const currentLine = searchParams.get("line");
 
-  // Determine which tab is active
   const getActiveTab = () => {
-    // If there's a line param or category param, match it
+    if (activeCategory) return activeCategory;
     if (currentCategory) {
       const found = categories.find(cat => cat.param === currentCategory);
       return found?.id || "ALL";
     }
-    // No params = ALL
     return "ALL";
   };
 
   const activeTab = getActiveTab();
 
-  // Generate link path for each tab
   const getTabPath = (category: typeof categories[0]) => {
-    if (category.param === null) {
-      // "ВСЕ" - clear all filters
-      return "/all";
-    }
+    if (category.param === null) return "/all";
     return `/all?category=${encodeURIComponent(category.param)}`;
   };
 
