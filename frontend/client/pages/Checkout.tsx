@@ -9,9 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/context/CartContext";
+import { createOrder } from "@/lib/api";
 import { toast } from "sonner";
-
-const STRAPI_URL = "https://heimish.ru/strapi-api";
 
 export default function Checkout() {
     const navigate = useNavigate();
@@ -52,41 +51,27 @@ export default function Checkout() {
         setIsSubmitting(true);
 
         try {
-            const orderData = {
-                data: {
-                    items: items.map((item) => ({
-                        id: item.id,
-                        documentId: item.documentId,
-                        name: item.name,
-                        image: item.image,
-                        price: item.price,
-                        quantity: item.quantity,
-                    })),
-                    total,
-                    status: "pending",
-                    customerName: formData.name,
-                    customerPhone: formData.phone,
-                    customerEmail: formData.email || null,
-                    address: deliveryMethod === "pickup" ? "Самовывоз" : formData.address,
-                    comment: formData.comment || null,
-                    deliveryMethod,
-                },
-            };
-
-            const response = await fetch(`${STRAPI_URL}/api/orders`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(orderData),
+            const result = await createOrder({
+                items: items.map((item) => ({
+                    productId: item.id,
+                    title: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                })),
+                total,
+                customerName: formData.name,
+                customerPhone: formData.phone,
+                customerEmail: formData.email || undefined,
+                address: deliveryMethod === "pickup" ? "Самовывоз" : formData.address,
+                comment: formData.comment || undefined,
+                deliveryMethod,
             });
 
-            if (!response.ok) {
-                throw new Error("Ошибка создания заказа");
+            if (!result.success) {
+                throw new Error(result.error || "Ошибка создания заказа");
             }
 
-            const result = await response.json();
-            setOrderId(result.data.id);
+            setOrderId(String(result.orderId));
             setOrderSuccess(true);
             clearCart();
 
